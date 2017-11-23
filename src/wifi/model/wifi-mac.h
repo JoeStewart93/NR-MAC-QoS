@@ -41,11 +41,19 @@ namespace ns3 {
 class WifiMac : public Object
 {
 public:
+
+
+
+
   /**
    * \brief Get the type ID.
    * \return the object TypeId
    */
   static TypeId GetTypeId (void);
+
+
+  void SetAppLayerPriority (int val);
+
 
   /**
    * \param slotTime the slot duration

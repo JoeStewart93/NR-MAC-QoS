@@ -23,9 +23,19 @@
 
 namespace ns3 {
 
+int appLayerPriority = 2;
+int QoSM=0;
+
 NS_LOG_COMPONENT_DEFINE ("WifiMac");
 
 NS_OBJECT_ENSURE_REGISTERED (WifiMac);
+
+
+void
+WifiMac::SetAppLayerPriority(int val){
+appLayerPriority = val;
+}
+
 
 Time
 WifiMac::GetDefaultMaxPropagationDelay (void)
@@ -79,6 +89,25 @@ WifiMac::GetDefaultCtsAckTimeout (void)
   ctsTimeout += GetDefaultCtsAckDelay ();
   ctsTimeout += MicroSeconds (GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2);
   ctsTimeout += GetDefaultSlot ();
+
+  switch(appLayerPriority) {
+
+  	  case 0:
+  		  ctsTimeout -= (0.50 * MicroSeconds(ctsTimeout));
+  		  QoSM=5;
+  		  break;
+  	  case 1:
+  		  ctsTimeout -=	(0.25 * MicroSeconds(ctsTimeout));
+  		  QoSM=3;
+  		  break;
+
+  	  case 2:
+  		  ctsTimeout -= (0 * MicroSeconds(ctsTimeout));
+  		  QoSM=1;
+  		  break;
+
+  }
+
   return ctsTimeout;
 }
 
@@ -336,8 +365,11 @@ void
 WifiMac::Configure80211a (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (16));
-  SetSlot (MicroSeconds (9));
+
+
+
+  SetSifs (MicroSeconds (16/QoSM));
+  SetSlot (MicroSeconds (9/QoSM));
   SetEifsNoDifs (MicroSeconds (16 + 44));
   SetPifs (MicroSeconds (16 + 9));
   SetCtsTimeout (MicroSeconds (16 + 44 + 9 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
@@ -348,24 +380,24 @@ void
 WifiMac::Configure80211b (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (10));
-  SetSlot (MicroSeconds (20));
+  SetSifs (MicroSeconds (10/QoSM));
+  SetSlot (MicroSeconds (20/QoSM));
   SetEifsNoDifs (MicroSeconds (10 + 304));
   SetPifs (MicroSeconds (10 + 20));
   SetCtsTimeout (MicroSeconds (10 + 304 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
-  SetAckTimeout (MicroSeconds (10 + 304 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
+  SetAckTimeout (MicroSeconds (10/ + 304 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
 }
 
 void
 WifiMac::Configure80211g (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (10));
+  SetSifs (MicroSeconds (10/QoSM));
   // Slot time defaults to the "long slot time" of 20 us in the standard
   // according to mixed 802.11b/g deployments.  Short slot time is enabled
   // if the user sets the ShortSlotTimeSupported flag to true and when the BSS
   // consists of only ERP STAs capable of supporting this option.
-  SetSlot (MicroSeconds (20));
+  SetSlot (MicroSeconds (20/QoSM));
   SetEifsNoDifs (MicroSeconds (10 + 304));
   SetPifs (MicroSeconds (10 + 20));
   SetCtsTimeout (MicroSeconds (10 + 304 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
@@ -376,10 +408,10 @@ void
 WifiMac::Configure80211_10Mhz (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (32));
-  SetSlot (MicroSeconds (13));
+  SetSifs (MicroSeconds (32/QoSM));
+  SetSlot (MicroSeconds (13/QoSM));
   SetEifsNoDifs (MicroSeconds (32 + 88));
-  SetPifs (MicroSeconds (32 + 13));
+  SetPifs (MicroSeconds (32/+ 13));
   SetCtsTimeout (MicroSeconds (32 + 88 + 13 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
   SetAckTimeout (MicroSeconds (32 + 88 + 13 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
 }
@@ -388,8 +420,8 @@ void
 WifiMac::Configure80211_5Mhz (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (64));
-  SetSlot (MicroSeconds (21));
+  SetSifs (MicroSeconds (64/QoSM));
+  SetSlot (MicroSeconds (21/QoSM));
   SetEifsNoDifs (MicroSeconds (64 + 176));
   SetPifs (MicroSeconds (64 + 21));
   SetCtsTimeout (MicroSeconds (64 + 176 + 21 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
@@ -405,6 +437,7 @@ WifiMac::Configure80211n_2_4Ghz (void)
   SetBasicBlockAckTimeout (GetSifs () + GetSlot () + GetDefaultBasicBlockAckDelay () + GetDefaultMaxPropagationDelay () * 2);
   SetCompressedBlockAckTimeout (GetSifs () + GetSlot () + MicroSeconds (448) + GetDefaultMaxPropagationDelay () * 2);
 }
+
 void
 WifiMac::Configure80211n_5Ghz (void)
 {
@@ -412,7 +445,7 @@ WifiMac::Configure80211n_5Ghz (void)
   Configure80211a ();
   SetRifs (MicroSeconds (2));
   SetBasicBlockAckTimeout (GetSifs () + GetSlot () + GetDefaultBasicBlockAckDelay () + GetDefaultMaxPropagationDelay () * 2);
-  SetCompressedBlockAckTimeout (GetSifs () + GetSlot () + GetDefaultCompressedBlockAckDelay () + GetDefaultMaxPropagationDelay () * 2);
+  SetCompressedBlockAckTimeout (GetSifs() + GetSlot () + GetDefaultCompressedBlockAckDelay () + GetDefaultMaxPropagationDelay () * 2);
 }
 
 void
