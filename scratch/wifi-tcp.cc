@@ -32,6 +32,8 @@
  * of TCP i.e. congestion control algorithm to use.
  */
 
+#include <iostream>
+#include <string>
 #include "ns3/applications-module.h"
 #include "ns3/core-module.h"
 #include "ns3/internet-module.h"
@@ -42,8 +44,14 @@ NS_LOG_COMPONENT_DEFINE ("wifi-tcp");
 
 using namespace ns3;
 
+
+
+
 Ptr<PacketSink> sink;                         /* Pointer to the packet sink application */
 uint64_t lastTotalRx = 0;                     /* The value of the last total received bytes */
+int tn = 5;
+std::string pri;
+
 
 void
 CalculateThroughput ()
@@ -55,14 +63,25 @@ CalculateThroughput ()
   Simulator::Schedule (MilliSeconds (100), &CalculateThroughput);
 }
 
+void setPri(int i) {
+	WifiMac::SetAppLayerPriority(i);
+	WifiMac::SetQoSType(1);
+}
+
 int
 main (int argc, char *argv[])
 {
-  uint32_t payloadSize = 2048;                       /* Transport layer payload size in bytes. */
+
+//void fork();
+	double avgTp[tn+1];
+	for (int i=1;i<tn+1;i++) {
+	setPri(i);
+
+  uint32_t payloadSize = 4096;                       /* Transport layer payload size in bytes. */
   std::string dataRate = "100Mbps";                  /* Application layer datarate. */
   std::string tcpVariant = "TcpNewReno";             /* TCP variant type. */
   std::string phyRate = "HtMcs7";                    /* Physical layer bitrate. */
-  double simulationTime = 10;                        /* Simulation time in seconds. */
+  double simulationTime = 30;                        /* Simulation time in seconds. */
   bool pcapTracing = true;                          /* PCAP Tracing is enabled or not. */
 
   /* Command line argument parser setup. */
@@ -185,6 +204,7 @@ main (int argc, char *argv[])
   ApplicationContainer serverApp = server.Install (staWifiNode);
 
   /* Start Applications */
+
   sinkApp.Start (Seconds (0.0));
   serverApp.Start (Seconds (1.0));
   Simulator::Schedule (Seconds (1.1), &CalculateThroughput);
@@ -203,11 +223,45 @@ main (int argc, char *argv[])
   Simulator::Destroy ();
 
   double averageThroughput = ((sink->GetTotalRx () * 8) / (1e6  * simulationTime));
-  if (averageThroughput < 50)
-    {
-      NS_LOG_ERROR ("Obtained throughput is not in the expected boundaries!");
-      exit (1);
-    }
-  std::cout << "\nAverage throughput: " << averageThroughput << " Mbit/s" << std::endl;
-  return 0;
+  avgTp[i] = averageThroughput;
+  //if (averageThroughput < 50)
+    //{
+    //  NS_LOG_ERROR ("Obtained throughput is not in the expected boundaries!");
+    //  std::cout << "Throughput is lower than expected... Something went wrong." << std::endl;
+    //  std::cout << "\nAverage throughput: " << averageThroughput << " Mbit/s, with MAC-Priority: " << i << "" << std::endl;
+      //exit (1);
+  //  }
+
+  std::cout << "\nAverage throughput: " << averageThroughput << " Mbit/s, with MAC-Priority: " << i << "\n" << std::endl;
+  //return 0;
+	}
+
+	std::cout << "\n\n\033[1;34mQoS Priority Results: " << std::endl;
+	std::cout << "\n\033[0m" << std::endl;
+
+	int x=0;
+	for (int i=1;i<tn+1;i++) {
+		if (avgTp[i]>50)
+			avgTp[0] += avgTp[i];
+		else x++;
+		if (i==tn) avgTp[0] /=(tn+1 - x);
+		}
+
+	for (int i=1;i<tn+1;i++) {
+
+		if (avgTp[i] >= 50 && i==1){
+				std::cout << "\033[1;36mMAC-QoS Priority " << i << " --- " << avgTp[i] << " Mbits/s\033[0m" << std::endl;
+						}
+				else if (avgTp[i] > avgTp[1] && avgTp[i] > 50 ){
+		std::cout << "\033[1;32mMAC-QoS Priority " << i << " --- " << avgTp[i] << " Mbits/s\033[0m" << std::endl;
+				}
+				else if (avgTp[i] < avgTp[1] && avgTp[i] > 50) {
+		std::cout << "\033[1;33mMAC-QoS Priority " << i << " --- " << avgTp[i] << " Mbits/s -- Below base case! \033[0m" << std::endl;
+				}
+				else {
+		std::cout << "\033[1;33mMAC-QoS Priority " << i << " --- " << avgTp[i] << " Mbits/s -- Below 50Mbits/s & Below base case! \033[0m" << std::endl;
+				}
+	}
+	std::cout << "\n" << std::endl;
+return 0;
 }

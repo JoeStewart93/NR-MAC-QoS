@@ -52,8 +52,15 @@ public:
   static TypeId GetTypeId (void);
 
 
-  void SetAppLayerPriority (int val);
+  static void SetAppLayerPriority (int val);
 
+  static void SetQoSType (int val);
+
+  static int GetAppLayerPriority(void);
+
+  virtual void ConfigureQoS (void);
+
+  static double DelayModifier(double time);
 
   /**
    * \param slotTime the slot duration

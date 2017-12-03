@@ -23,19 +23,122 @@
 
 namespace ns3 {
 
-int appLayerPriority = 2;
-int QoSM=0;
+int appLayerPriority = 1;
+int QoSM=1;
+int PriMode = 2;
+
 
 NS_LOG_COMPONENT_DEFINE ("WifiMac");
 
 NS_OBJECT_ENSURE_REGISTERED (WifiMac);
 
 
+
+void
+WifiMac::ConfigureQoS (void)
+{
+	switch(appLayerPriority) {
+
+	////////////////////////////////////////////////////
+	/// Case 1 -> 3 are within scope of Research
+	/// Case 4 -> 7 are experimental -- Proof of Concept
+	  	  case 1:
+	  		  QoSM=1; // Default priority - Standard
+	  		 break;
+
+	  	  case 2:
+	  		  QoSM=2; // Medium priority - Urgent
+	  		 break;
+
+	  	  case 3:
+	  		  QoSM=3; // Highest priority - Critical
+	  		 break;
+	////////////////////////////////////////////////////
+
+
+
+	  	  case 4:
+	  		  QoSM=5; // EXPERIMENTAL - 5X MODIFIER
+	  		 break;
+
+	  	  case 5:
+	  		  QoSM=7; // EXPERIMENTAL - 7X MODIFIER
+	  		 break;
+
+	  	  case 6:
+	  		  QoSM=10; // EXPERIMENTAL - 10X MODIFIER
+	  	     break;
+
+	  	  case 7:
+	  		  QoSM=15; // EXPERIMENTAL - 15X MODIFIER
+	  		break;
+
+	  	  default:
+	  		  QoSM=1; // Else, default to Standard priority
+	  		 break;
+			}
+
+}
+
 void
 WifiMac::SetAppLayerPriority(int val){
 appLayerPriority = val;
 }
 
+void
+WifiMac::SetQoSType(int val){
+PriMode = val;
+}
+
+int
+WifiMac::GetAppLayerPriority(void){
+return appLayerPriority;
+}
+
+double
+WifiMac::DelayModifier(double time) {
+double val;
+
+switch(PriMode){
+
+
+	case 1: //  By Percentage
+
+		if (appLayerPriority==1) {
+			val = (time);
+		}
+		else if (appLayerPriority==2) {
+			val = (time - (time*0.15));
+		}
+
+		else if (appLayerPriority==3) {
+			val = (time - (time*0.30));
+		}
+
+		else if (appLayerPriority==4) {
+			val = (time - (time*0.50));
+		}
+
+		else if (appLayerPriority==5) {
+			val = (time - (time*0.75));
+		}
+
+		else {
+			val = (time);
+		}
+		break;
+		//---------------------------------
+
+	case 2: // Incremental QoS -- Proof of Concept
+			val = (time/QoSM);
+			break;
+	default:
+		break;
+
+
+}
+return val;
+}
 
 Time
 WifiMac::GetDefaultMaxPropagationDelay (void)
@@ -90,23 +193,7 @@ WifiMac::GetDefaultCtsAckTimeout (void)
   ctsTimeout += MicroSeconds (GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2);
   ctsTimeout += GetDefaultSlot ();
 
-  switch(appLayerPriority) {
 
-  	  case 0:
-  		  ctsTimeout -= (0.50 * MicroSeconds(ctsTimeout));
-  		  QoSM=5;
-  		  break;
-  	  case 1:
-  		  ctsTimeout -=	(0.25 * MicroSeconds(ctsTimeout));
-  		  QoSM=3;
-  		  break;
-
-  	  case 2:
-  		  ctsTimeout -= (0 * MicroSeconds(ctsTimeout));
-  		  QoSM=1;
-  		  break;
-
-  }
 
   return ctsTimeout;
 }
@@ -318,6 +405,8 @@ void
 WifiMac::ConfigureStandard (WifiPhyStandard standard)
 {
   NS_LOG_FUNCTION (this << standard);
+  ConfigureQoS (); // Configures QoS Priority before configuring each state
+
   switch (standard)
     {
     case WIFI_PHY_STANDARD_80211a:
@@ -367,9 +456,8 @@ WifiMac::Configure80211a (void)
   NS_LOG_FUNCTION (this);
 
 
-
-  SetSifs (MicroSeconds (16/QoSM));
-  SetSlot (MicroSeconds (9/QoSM));
+  SetSifs (MicroSeconds (16));
+  SetSlot (MicroSeconds (DelayModifier(9)));
   SetEifsNoDifs (MicroSeconds (16 + 44));
   SetPifs (MicroSeconds (16 + 9));
   SetCtsTimeout (MicroSeconds (16 + 44 + 9 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
@@ -380,8 +468,8 @@ void
 WifiMac::Configure80211b (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (10/QoSM));
-  SetSlot (MicroSeconds (20/QoSM));
+  SetSifs (MicroSeconds (10));
+  SetSlot (MicroSeconds (DelayModifier(20)));
   SetEifsNoDifs (MicroSeconds (10 + 304));
   SetPifs (MicroSeconds (10 + 20));
   SetCtsTimeout (MicroSeconds (10 + 304 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
@@ -392,12 +480,12 @@ void
 WifiMac::Configure80211g (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (10/QoSM));
+  SetSifs (MicroSeconds (10));
   // Slot time defaults to the "long slot time" of 20 us in the standard
   // according to mixed 802.11b/g deployments.  Short slot time is enabled
   // if the user sets the ShortSlotTimeSupported flag to true and when the BSS
   // consists of only ERP STAs capable of supporting this option.
-  SetSlot (MicroSeconds (20/QoSM));
+  SetSlot (MicroSeconds (DelayModifier(20)));
   SetEifsNoDifs (MicroSeconds (10 + 304));
   SetPifs (MicroSeconds (10 + 20));
   SetCtsTimeout (MicroSeconds (10 + 304 + 20 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
@@ -408,8 +496,8 @@ void
 WifiMac::Configure80211_10Mhz (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (32/QoSM));
-  SetSlot (MicroSeconds (13/QoSM));
+  SetSifs (MicroSeconds (32));
+  SetSlot (MicroSeconds (DelayModifier(13)));
   SetEifsNoDifs (MicroSeconds (32 + 88));
   SetPifs (MicroSeconds (32/+ 13));
   SetCtsTimeout (MicroSeconds (32 + 88 + 13 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));
@@ -420,8 +508,8 @@ void
 WifiMac::Configure80211_5Mhz (void)
 {
   NS_LOG_FUNCTION (this);
-  SetSifs (MicroSeconds (64/QoSM));
-  SetSlot (MicroSeconds (21/QoSM));
+  SetSifs (MicroSeconds (64));
+  SetSlot (MicroSeconds (DelayModifier(21)));
   SetEifsNoDifs (MicroSeconds (64 + 176));
   SetPifs (MicroSeconds (64 + 21));
   SetCtsTimeout (MicroSeconds (64 + 176 + 21 + GetDefaultMaxPropagationDelay ().GetMicroSeconds () * 2));

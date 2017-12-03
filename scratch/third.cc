@@ -14,6 +14,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <iostream>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
 #include "ns3/core-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/network-module.h"
@@ -38,9 +45,35 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("ThirdScriptExample");
 
-int 
-main (int argc, char *argv[])
+int tn=5;
+int j=1;
+void setPri(int i) {
+	WifiMac::SetAppLayerPriority(i);
+	WifiMac::SetQoSType(1);
+}
+
+
+int
+main(int argc,char *argv[])
 {
+
+	for (int i=1;i<tn+1;i++) {
+
+			setPri(i);
+
+			//	pid_t pid;
+	  		//	fork();
+	  		//	fork();
+	  		//	pid = getpid();
+	  		//	if (pid!=0) {
+	  		//		setPri(1);
+	  		//	}
+	  		//	if (pid==0) {
+	  		//	  setPri(++j);
+	  		//	}
+
+
+
   bool verbose = true;
   uint32_t nCsma = 3;
   uint32_t nWifi = 3;
@@ -71,7 +104,7 @@ main (int argc, char *argv[])
 
   NodeContainer p2pNodes;
   p2pNodes.Create (2);
-
+  //p2pNodes.Get(j);
   PointToPointHelper pointToPoint;
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
@@ -161,7 +194,7 @@ main (int argc, char *argv[])
   UdpEchoClientHelper echoClient (csmaInterfaces.GetAddress (nCsma), 9);
   echoClient.SetAttribute ("MaxPackets", UintegerValue (1024));
   echoClient.SetAttribute ("Interval", TimeValue (Seconds (0.0002)));
-  echoClient.SetAttribute ("PacketSize", UintegerValue (4096));
+  echoClient.SetAttribute ("PacketSize", UintegerValue (2048));
 
   ApplicationContainer clientApps = 
     echoClient.Install (wifiStaNodes.Get (nWifi - 1));
@@ -179,7 +212,19 @@ main (int argc, char *argv[])
       csma.EnablePcap ("third", csmaDevices.Get (0), true);
     }
 
+
+
+
+  std::cout << "MAC LAYER PRIORITY : " << i << std::endl;
   Simulator::Run ();
   Simulator::Destroy ();
-  return 0;
-}
+  std::cout << "Running at MAC LAYER PRIORITY : " << i << std::endl;
+  std::cout << "-----------------------------------------------------" << std::endl;
+  sleep(10);
+	}
+	  return 0;
+			}
+
+
+
+
